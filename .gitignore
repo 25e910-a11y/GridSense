@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Node / React
+node_modules/
+dist/
+build/
+.vite/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Python testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secrets / certificates
+*.pem
+*.key
+
+# Local databases
+*.sqlite
+*.sqlite3
+*.db
+database/power_monitoring.db
+
+# MATLAB temporary files
+*.asv
+
+# Local/raw datasets
+datasets/raw/
+
+# Playwright test artifacts
+frontend/test-results/
+frontend/playwright-report/
