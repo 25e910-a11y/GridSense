@@ -1,5 +1,7 @@
 # GridSense
 
+IoT-based 3-phase power monitoring and fault identification system.
+
 For the **IoT-Based Power Monitoring & Fault Identification System**.
 
 ## Files
