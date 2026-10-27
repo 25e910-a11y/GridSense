@@ -72,7 +72,17 @@ IMBALANCE_PERCENT=10.0
 
 ## 3. Database Initialization & Seeding
 
-### Step 3.1: Seed Database with Realistic Telemetry & Hierarchy
+### Step 3.1: Run Database Migrations with Alembic
+To initialize or upgrade the database schema (PostgreSQL or SQLite), always use `alembic upgrade head`:
+```powershell
+cd backend
+.\.venv\Scripts\alembic upgrade head
+```
+- **New installation:** Executes revisions `53f1a59aca1d -> 4a921bc8c9a8 -> 7b831cd9e102`, creating all 12 tables, foreign keys, and indexes in topological order.
+- **Existing database:** Idempotent migration logic inspects existing tables, columns, constraints, and indexes. It automatically adds any missing schema elements, preserves existing row data, and updates `alembic_version` to `head` (`7b831cd9e102`).
+- **Note on `alembic stamp head`:** Do **not** run `alembic stamp head` as a shortcut on existing databases. Stamping only records the revision hash in `alembic_version` without executing DDL, which leaves missing tables or columns unapplied. Stamping is only appropriate if the full schema was just created in its entirety via `Base.metadata.create_all()` in the current revision.
+
+### Step 3.2: Seed Database with Realistic Telemetry & Hierarchy
 From the project root:
 ```powershell
 python database/seed.py
@@ -105,7 +115,7 @@ Start the Uvicorn development server:
 
 ### Step 5.1: Navigate to Frontend Directory
 ```powershell
-cd d:\IoT-Power-Monitoring-System\frontend
+cd frontend
 ```
 
 ### Step 5.2: Install NPM Dependencies
@@ -126,7 +136,7 @@ To verify TypeScript compilation and production bundling:
 ```cmd
 npm run build
 ```
-*(Verified: compiles 2558 modules into `dist/` cleanly).*
+*(Verified: compiles 2574 modules into `dist/` cleanly).*
 
 ---
 
@@ -134,10 +144,10 @@ npm run build
 
 Run the complete test suite using the virtual environment pytest:
 ```powershell
-cd d:\IoT-Power-Monitoring-System\backend
-.\.venv\Scripts\pytest -v
+cd backend
+$env:ADMIN_USERNAME="sysadmin"; $env:ADMIN_PASSWORD="testadminpassword123"; .\.venv\Scripts\pytest -v
 ```
-*(Verified: 13 passed in < 1.2s covering rule engine, auth, maintenance, telemetry, and notifications).*
+*(Verified: 44 passed in 8.69s covering rule engine, auth, maintenance, telemetry, locations, and notifications).*
 
 ---
 
@@ -145,9 +155,9 @@ cd d:\IoT-Power-Monitoring-System\backend
 
 | Command | Environment | Status / Result | Notes |
 |---|---|---|---|
-| `.\.venv\Scripts\pytest -v` | Windows 11 PowerShell | **TESTED: PASSED** | 13/13 tests pass in 1.13s |
-| `cmd /c npm run build` | Windows 11 CMD | **TESTED: PASSED** | `tsc -b && vite build` built in 8.85s |
+| `.\.venv\Scripts\pytest -v` | Windows 11 PowerShell | **TESTED: PASSED** | 44/44 tests pass in 8.69s |
+| `cmd /c npm run build` | Windows 11 CMD | **TESTED: PASSED** | `tsc -b && vite build` built in 876ms |
 | `python database/seed.py` | Python 3.13 | **TESTED: PASSED** | Database created and populated |
-| `alembic upgrade head` | Clean database | **TESTED: FAILED** | Known bug: missing `floors` table in migration `53f1a59aca1d` |
+| `alembic upgrade head` | Clean & Existing databases | **TESTED: PASSED** | Migrations `53f1a59aca1d -> 4a921bc8c9a8 -> 7b831cd9e102` successfully create/verify all 12 tables and reach head. |
 | Live ESP32 Wi-Fi Ingestion | Hardware Testbench | **UNTESTED** | Microcontroller firmware in `firmware/` not yet written |
 | Live 40 A Relay Switching | Physical Hardware | **UNTESTED** | Restricted pending electrical safety review |

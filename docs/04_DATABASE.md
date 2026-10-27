@@ -295,15 +295,15 @@ erDiagram
 
 ---
 
-## 4. Migration History & Alembic Inconsistencies
+## 4. Migration History & Resolution
 
-### Existing Migration Chain:
-1. `53f1a59aca1d_create_devices_table.py` (Revision ID: `53f1a59aca1d`)
-2. `4a921bc8c9a8_add_missing_columns.py` (Revises: `53f1a59aca1d`)
+### Migration Chain:
+1. `53f1a59aca1d_create_devices_table.py` (Revision ID: `53f1a59aca1d`, down_revision: `None`): Baseline schema provisioning all 12 tables (`colleges`, `blocks`, `floors`, `devices`, `telemetry`, `relays`, `faults`, `users`, `notifications`, `work_orders`, `work_attempts`, `audit_logs`) and indexes in topological order.
+2. `4a921bc8c9a8_add_missing_columns.py` (Revision ID: `4a921bc8c9a8`, down_revision: `53f1a59aca1d`): Adds `last_seen_at`, `ingest_key` to `devices`; `category`, `measured_value`, `expected_value`, `unit` to `faults`; `gpio_pin`, `commanded_state`, `actual_state` to `relays`.
+3. `7b831cd9e102_add_user_location_scope.py` (Revision ID: `7b831cd9e102`, down_revision: `4a921bc8c9a8`): Adds `assigned_block_id` and `assigned_floor_id` to `users`.
 
-### Critical Migration Defect:
-- In `53f1a59aca1d_create_devices_table.py`, line 32 declares:
-  `sa.ForeignKeyConstraint(['floor_id'], ['floors.id'])`
-- **Root Cause Defect:** The `floors` table is **not** created anywhere prior to or within this initial migration. Running `alembic upgrade head` against a clean PostgreSQL instance fails with a foreign key constraint violation.
-- **Why it worked locally:** In `backend/app/main.py`, line 50 executes `Base.metadata.create_all(bind=engine)` synchronously on startup, creating all tables directly from the SQLAlchemy models without using Alembic.
-- **Action Plan:** Consolidate the Alembic migration history into a clean baseline migration that provisions all 12 tables in topological order before applying foreign key constraints.
+### Idempotency & Multi-Environment Support:
+- **Primary Migration Command:** Always execute `alembic upgrade head` for both fresh installations and existing databases.
+  - **Clean Database:** Runs revisions `53f1a59aca1d -> 4a921bc8c9a8 -> 7b831cd9e102`, creating all 12 tables, foreign keys, and indexes in topological order.
+  - **Existing / Upgraded Database:** Alembic migrations feature object existence checks (`sa.inspect`) for tables, columns, constraints, and indexes. Running `alembic upgrade head` safely detects existing objects and applies any missing columns or constraints before advancing `alembic_version` to `head` (`7b831cd9e102`), preserving existing data without collision errors.
+- **`alembic stamp head` Usage Constraint:** `alembic stamp head` must **never** be used as a substitute for `alembic upgrade head` on arbitrary or legacy databases. Stamping only writes the revision identifier to `alembic_version` without executing any DDL, leaving any missing tables, columns, or foreign keys uncreated. `alembic stamp head` is reserved exclusively for instances where the complete, current schema was just freshly generated via `Base.metadata.create_all(bind=engine)` in the current code revision.

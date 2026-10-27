@@ -35,8 +35,13 @@ target_metadata = Base.metadata
 
 
 def run_migrations_online() -> None:
+    x_args = context.get_x_argument(as_dictionary=True)
+    db_url = x_args.get("db_url") or x_args.get("url") or config.get_main_option("sqlalchemy.url")
+    if not db_url:
+        db_url = settings.DATABASE_URL
+
     configuration = {
-        "sqlalchemy.url": settings.DATABASE_URL,
+        "sqlalchemy.url": db_url,
     }
 
     connectable = engine_from_config(
