@@ -25,7 +25,7 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
           <div style={{ maxWidth: 480, margin: '0 auto' }}>
             <AlertTriangle size={36} style={{ color: '#f59e0b', margin: '0 auto 1rem', display: 'block' }} />
             <h3 style={{ color: '#fff', fontSize: '1.15rem', marginBottom: '0.5rem', fontWeight: 700 }}>
-              Telemetry Stream Unavailable — Backend Disconnected
+              Backend disconnected: no live readings
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>
               The FastAPI backend server is currently unreachable. Connect the backend to observe live 3-phase telemetry streams.
