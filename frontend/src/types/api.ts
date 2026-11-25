@@ -204,13 +204,18 @@ export interface UserItem {
 }
 
 export interface ManagementSummary {
-  system_status: SystemStatus;
+  // Matches GET /dashboard/summary in backend/app/api/dashboard.py
+  timestamp: string;
+  scoped_block_id?: number | null;
+  scoped_floor_id?: number | null;
   total_devices: number;
   active_devices: number;
-  total_energy_kwh: number;
-  total_active_power_kw: number;
+  online_devices: number;
+  offline_devices: number;
   open_faults_count: number;
+  critical_faults_count: number;
+  warning_faults_count: number;
   open_work_orders_count: number;
-  blocks_count: number;
-  timestamp: string;
+  total_active_power_watts: number;
+  total_energy_kwh: number;
 }

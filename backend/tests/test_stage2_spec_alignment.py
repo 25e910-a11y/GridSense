@@ -239,3 +239,33 @@ def test_work_order_closes_only_after_readings_are_normal(client, admin_headers,
     assert closed.status_code == 200
     assert closed.json()["status"] == "closed"
     assert client.get(f"/faults/{fault_id}", headers=admin_headers).json()["status"] == "rectified"
+
+
+# --- KPI summary -------------------------------------------------------------
+
+def test_summary_adds_energy_across_phases_and_counts_open_work_orders(
+    client, admin_headers, ingest_headers, technician_user
+):
+    dev = _make_device(client, admin_headers, "KPI-DEV")
+    for phase, energy in (("R", 10.0), ("Y", 20.0), ("B", 30.0)):
+        res = client.post("/telemetry/", json=_reading(dev, phase=phase, energy=energy, power=1000.0), headers=ingest_headers)
+        assert res.status_code == 200
+
+    summary = client.get("/dashboard/summary", headers=admin_headers).json()
+    # Each PZEM has its own energy counter: total is the sum, not the largest one.
+    assert summary["total_energy_kwh"] == 60.0
+    assert summary["total_active_power_watts"] == 3000.0
+    assert summary["open_work_orders_count"] == 0
+
+    client.post("/telemetry/", json=_reading(dev, phase="R", voltage=262.0, energy=10.0), headers=ingest_headers)
+    fault_id = next(
+        f["id"] for f in client.get("/faults/", params={"device_id": dev}, headers=admin_headers).json()
+        if f["fault_type"] == "OVERVOLTAGE"
+    )
+    wo = client.post(
+        "/maintenance/work-orders",
+        json={"fault_id": fault_id, "assigned_to": technician_user.username},
+        headers=admin_headers,
+    )
+    assert wo.status_code == 200
+    assert client.get("/dashboard/summary", headers=admin_headers).json()["open_work_orders_count"] == 1

@@ -79,9 +79,9 @@
 
 | Feature | Status | Evidence / Files | Target Phase |
 |---|---|---|---|
-| **ESP32-S3 Microcontroller Firmware** | **Missing** | `firmware/` (directory empty) | Phase F Milestone |
-| **PZEM-004T Modbus RTU Reader** | **Missing** | `firmware/` | Phase F Milestone |
-| **DS18B20 OneWire & DS3231 RTC Driver** | **Missing** | `firmware/` | Phase F Milestone |
+| **ESP32-S3 Microcontroller Firmware** | **Not in this repo yet** | `firmware/` (to be added) | Phase F Milestone |
+| **PZEM-004T Modbus RTU Reader** | **Not in this repo yet** | `firmware/` (to be added) | Phase F Milestone |
+| **DS18B20 OneWire & DS3231 RTC Driver** | **Not in this repo yet** | `firmware/` (to be added) | Phase F Milestone |
 | **MATLAB / Simulink Grid Simulation** | **Planned** | `matlab/` (directory empty) | Phase G Milestone |
 | **Telemetry Anomaly Dataset Management**| **Planned** | `datasets/` (directory empty) | Phase H Milestone |
 | **Machine Learning Predictive Models** | **Planned** | `datasets/` | Phase I Milestone (`ML_ENABLED=false`) |

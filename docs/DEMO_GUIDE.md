@@ -117,12 +117,12 @@ Role-Based Access Control (RBAC) is enforced both client-side and server-side ac
 
 | Role | Username | Password | Operational Capabilities & Boundaries |
 |---|---|---|---|
-| **Operator** | `operator1` | `demo123` | Read-only live telemetry, phase status, and fault alarms scoped to assigned Block 1. Blocked from fault acknowledgement, work order creation, relay switching, and audit logs. |
-| **Shift In-Charge** | `shift_incharge1` | `demo123` | Operational alarm review, fault acknowledgement, and work order dispatch. Blocked from physical relay switching and unrestricted user administration. |
-| **Electrical Engineer** | `engineer1` | `demo123` | Detailed 3-phase diagnostics, trend analysis, fault rectification, and technical maintenance investigation. Blocked from relay switching without admin review. |
-| **Management** | `mgmt1` | `demo123` | Executive campus/block KPI summaries (`/management`), energy consumption trends, and unresolved incident counts. Read-only; blocked from operational controls. |
-| **Technician** | `technician1` | `demo123` | Assigned maintenance work orders (`/maintenance`), repair attempt logging, and status transitions. Strictly isolated to own assigned work orders. |
-| **Administrator** | `admin` | `demo123` | Full administrative control: user role and location scope administration (`/users`), SSR contactor actuation (`/relays`), and security audit trail (`/audit`). |
+| **Operator** | `operator1` | `operator123` | Read-only live telemetry, phase status, and fault alarms scoped to assigned Block 1. Blocked from fault acknowledgement, work order creation, relay switching, and audit logs. |
+| **Shift In-Charge** | `shift_incharge1` | `shift123` | Operational alarm review, fault acknowledgement, and work order dispatch. Blocked from physical relay switching and unrestricted user administration. |
+| **Electrical Engineer** | `engineer1` | `engineer123` | Detailed 3-phase diagnostics, trend analysis, fault rectification, and technical maintenance investigation. Blocked from relay switching without admin review. |
+| **Management** | `mgmt1` | `mgmt123` | Executive campus/block KPI summaries (`/management`), energy consumption trends, and unresolved incident counts. Read-only; blocked from operational controls. |
+| **Technician** | `technician1` | `tech123` | Assigned maintenance work orders (`/maintenance`), repair attempt logging, and status transitions. Strictly isolated to own assigned work orders. |
+| **Administrator** | `ADMIN_USERNAME` from `backend/.env` | `ADMIN_PASSWORD` from `backend/.env` | Full administrative control: user role and location scope administration (`/users`), relay commands (`/relays`, recorded only, not wired to any SSR), and security audit trail (`/audit`). |
 
 ---
 
@@ -180,7 +180,7 @@ Follow this scripted flow to present the software to academic staff and industry
 
 ### Minute 5: Relay Safety, Contactor Feedback & Security Audit Trail
 1. **Switch to Administrator Session:**
-   - Sign out and sign in with `admin` / `admin`.
+   - Sign out and sign in with the `ADMIN_USERNAME` / `ADMIN_PASSWORD` you set in `backend/.env`.
 2. **Navigate to Relays:** Click **Relays** (`/relays`).
    - Display the 3 Solid-State Relays: `SSR-R` (GPIO 7), `SSR-Y` (GPIO 8), and `SSR-B` (GPIO 9).
    - **Crucial Safety Talking Point:** Point out the **Engineering Safety Notice**:
@@ -217,7 +217,7 @@ Follow this scripted flow to present the software to academic staff and industry
 - **Diagnosis:** Telemetry table has no records for the selected device.
 - **Recovery:**
   1. Switch device selector in the header to **Power Monitoring Unit 01 (Main Incomer) (XIAO-PM-001)**.
-  2. Alternatively, run `python database/seed.py` from `backend/` to re-seed initial 3-phase records.
+  2. Alternatively, run `python ../database/seed.py` from `backend/` to re-seed initial 3-phase records.
 
 ### Issue 4: Session Expired or Redirect to Login
 - **Symptom:** Attempting to access `/faults` or `/maintenance` redirects to `/login`.
@@ -231,7 +231,7 @@ Follow this scripted flow to present the software to academic staff and industry
 
 To ensure full transparency during evaluation, the following items are documented as engineering work in progress and are **not claimed as complete**:
 
-1. **Hardware Modbus UART Communication:** Microcontroller firmware for the Seeed Studio XIAO ESP32-S3 is located in `firmware/` and is verified on logic benches; live RS-485 Modbus RTU continuous communication to three physical PZEM-004T V4 meters is not connected during this software presentation.
-2. **Physical High-Voltage Relay Actuation:** Software switching logic is verified end-to-end, but physical actuation of Fotek SSR-40DA relays under live 415 V load is intentionally omitted pending certified branch fusing and mechanical interlock safety review.
+1. **Node firmware:** The XIAO ESP32-S3 firmware is not in this repository yet. Readings in this demo come from the seed data and the built-in simulator, which are stored and shown as demo data. The PZEM-004T V4 modules talk Modbus-RTU over TTL serial (GPIO43/44), not RS-485.
+2. **SSR switching:** The three SSR-40DA relays are in the design but kept off. The relay page only records commands. Nothing is sent to hardware, and a command is never shown as a confirmed relay state. Switching stays off until a safety review with proper fusing and isolation.
 3. **Machine Learning / Predictive Maintenance:** No ML model is claimed or active. System fault detection is driven entirely by deterministic electrical engineering threshold algorithms in `backend/app/rules/engine.py`.
 4. **MATLAB Real-Time Co-Simulation:** Phase F simulation hooks are defined in architecture documentation, but live co-simulation is not part of this standalone web application demo.

@@ -39,7 +39,12 @@ export const PowerCharts: FC<PowerChartsProps> = ({ history, isLoading = false, 
     }
 
     const entry = chartDataMap.get(timeKey)!;
-    const val = item[selectedMetric];
+    // Sensor or communication errors are gaps in the chart, not drops to zero.
+    // Same usable-quality rule as the backend rule engine. Temperature comes from
+    // the enclosure DS18B20, so it is kept even when a PZEM reading failed.
+    const quality = item.data_quality?.trim().toLowerCase();
+    const usable = quality == null || ['good', 'ok', 'valid', 'estimated'].includes(quality);
+    const val = usable || selectedMetric === 'temperature' ? item[selectedMetric] : undefined;
     if (item.phase === 'R') entry.R = val;
     if (item.phase === 'Y') entry.Y = val;
     if (item.phase === 'B') entry.B = val;
@@ -55,10 +60,10 @@ export const PowerCharts: FC<PowerChartsProps> = ({ history, isLoading = false, 
   };
 
   const metricTitles: Record<MetricType, string> = {
-    voltage: '3-Phase Line Voltage (V RMS)',
-    current: '3-Phase Line Current (A RMS)',
+    voltage: 'Phase Voltage, line to neutral (V RMS)',
+    current: 'Phase Current (A RMS)',
     power: '3-Phase Active Power (Watts)',
-    temperature: 'Sensor Temperature (°C)',
+    temperature: 'Enclosure Temperature (°C)',
   };
 
   return (

@@ -55,8 +55,8 @@ DATABASE_URL=sqlite:///./power_monitoring.db
 AUTH_ENABLED=true
 JWT_SECRET=dev-change-me-generate-random-secret
 JWT_EXPIRE_MINUTES=1440
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin
+ADMIN_USERNAME=sysadmin
+ADMIN_PASSWORD=choose-a-password-of-8-or-more
 INGEST_API_KEY=dev-esp32-ingest-key-12345
 DEVICE_OFFLINE_SECONDS=120
 NOMINAL_PHASE_VOLTAGE=230.0
@@ -83,9 +83,9 @@ cd backend
 - **Note on `alembic stamp head`:** Do **not** run `alembic stamp head` as a shortcut on existing databases. Stamping only records the revision hash in `alembic_version` without executing DDL, which leaves missing tables or columns unapplied. Stamping is only appropriate if the full schema was just created in its entirety via `Base.metadata.create_all()` in the current revision.
 
 ### Step 3.2: Seed Database with Realistic Telemetry & Hierarchy
-From the project root:
+From the `backend` folder (so it reads `backend/.env` and uses the same database file as the server):
 ```powershell
-python database/seed.py
+python ..\database\seed.py
 ```
 This script:
 1. Provisions all database tables using SQLAlchemy models.
@@ -157,7 +157,7 @@ $env:ADMIN_USERNAME="sysadmin"; $env:ADMIN_PASSWORD="testadminpassword123"; .\.v
 |---|---|---|---|
 | `.\.venv\Scripts\pytest -v` | Windows 11 PowerShell | **TESTED: PASSED** | 44/44 tests pass in 8.69s |
 | `cmd /c npm run build` | Windows 11 CMD | **TESTED: PASSED** | `tsc -b && vite build` built in 876ms |
-| `python database/seed.py` | Python 3.13 | **TESTED: PASSED** | Database created and populated |
+| `python ../database/seed.py` (from `backend`) | Python 3.13 | **TESTED: PASSED** | Database created and populated |
 | `alembic upgrade head` | Clean & Existing databases | **TESTED: PASSED** | Migrations `53f1a59aca1d -> 4a921bc8c9a8 -> 7b831cd9e102 -> c3d5e7f9a1b2` successfully create/verify all 12 tables and reach head. |
-| Live ESP32 Wi-Fi Ingestion | Hardware Testbench | **UNTESTED** | Microcontroller firmware in `firmware/` not yet written |
+| Live ESP32 Wi-Fi Ingestion | Hardware Testbench | **UNTESTED** | Node firmware is not in this repository yet |
 | Live 40 A Relay Switching | Physical Hardware | **UNTESTED** | Restricted pending electrical safety review |

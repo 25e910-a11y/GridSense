@@ -75,11 +75,16 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate        # Windows: .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-cp .env.example .env             # then fill in ADMIN_USERNAME, ADMIN_PASSWORD, INGEST_API_KEY
+cp .env.example .env             # then edit it, see below
 alembic upgrade head
-cd .. && python database/seed.py && cd backend
+python ../database/seed.py       # run from backend, so it uses the same .env and database
 uvicorn app.main:app --reload --port 8000
 ```
+
+In `backend/.env`, set at least:
+- `DATABASE_URL=sqlite:///./power_monitoring.db` to try it without PostgreSQL
+- `ADMIN_USERNAME` and `ADMIN_PASSWORD` (8 or more characters) for the admin login
+- `INGEST_API_KEY` to any long random text
 
 API docs open at http://127.0.0.1:8000/docs.
 
@@ -92,6 +97,19 @@ npm run dev
 ```
 
 The dashboard opens at http://localhost:5173.
+
+Demo logins created by the seed (local demo data only):
+
+| Role | Username | Password |
+|---|---|---|
+| Admin | your `ADMIN_USERNAME` | your `ADMIN_PASSWORD` |
+| Operator | `operator1` | `operator123` |
+| Shift in-charge | `shift_incharge1` | `shift123` |
+| Electrical engineer | `engineer1` | `engineer123` |
+| Management | `mgmt1` | `mgmt123` |
+| Technician | `technician1` | `tech123` |
+
+Use "Simulate Fault" in the top bar to send test readings. They are stored and shown as demo data.
 
 Tests:
 
