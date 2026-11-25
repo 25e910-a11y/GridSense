@@ -123,4 +123,4 @@ This is a monitoring system, not a protection device. It does not replace fuses,
 
 ## Team
 
-The GridSense team, PSG College of Technology, Coimbatore. Vishwakarma Awards team ID VK26-IITH-SE-0093.
+The GridSense team, PSG College of Technology, Coimbatore.
