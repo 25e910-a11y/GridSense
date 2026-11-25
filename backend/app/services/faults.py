@@ -13,7 +13,10 @@ def record_findings(
     db: Session,
     device_id: int,
     findings: list[Finding],
+    notify: bool = True,
 ) -> list[Fault]:
+    """Store findings as faults. With notify=False (log-only mode) the faults
+    are still logged but no notifications are sent."""
     created: list[Fault] = []
 
     for finding in findings:
@@ -54,7 +57,7 @@ def record_findings(
         db.flush()
         created.append(fault)
 
-    if created:
+    if created and notify:
         notify_new_faults(db, created, findings)
 
     return created

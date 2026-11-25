@@ -406,44 +406,39 @@ def validate_device_access(
 # Telemetry Ingestion Authentication
 # ----------------------------------------------------------------------
 
+DEVICE_KEY_PENDING = "device-key-pending"
+
+
 def require_ingest(
     x_ingest_key: str | None = Header(default=None, alias="X-Ingest-Key"),
     user: User | None = Depends(get_optional_current_user),
 ) -> str:
     """
-    Explicit, secure authentication path for device telemetry ingestion.
-    Allows either:
-    1. A valid X-Ingest-Key matching settings.INGEST_API_KEY (device authentication).
+    Authentication for device telemetry ingestion. Allows either:
+    1. An X-Ingest-Key header. Each device can have its own key (stored hashed on
+       the device row). That key is checked in the telemetry route once the
+       device is known, so this returns DEVICE_KEY_PENDING for it. The shared
+       settings.INGEST_API_KEY is still accepted for devices that have no key of
+       their own yet.
     2. An authenticated user (operator, technician, engineer, or admin) via Bearer token.
     """
     if not settings.AUTH_ENABLED:
         return "anonymous"
 
     # Path 1: Device authentication via X-Ingest-Key
-    if settings.INGEST_API_KEY:
-        if x_ingest_key:
-            if secrets.compare_digest(x_ingest_key, settings.INGEST_API_KEY):
-                return "device"
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid device ingestion key",
-            )
+    if x_ingest_key:
+        if settings.INGEST_API_KEY and secrets.compare_digest(x_ingest_key, settings.INGEST_API_KEY):
+            return "device"
+        return DEVICE_KEY_PENDING
 
     # Path 2: User authentication via Bearer token
     if user is not None:
         return user.username
 
-    # Missing credentials
-    if settings.INGEST_API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Valid device ingestion key (X-Ingest-Key) or authenticated bearer token required",
-        )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required for telemetry ingestion",
-        )
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Valid device ingestion key (X-Ingest-Key) or authenticated bearer token required",
+    )
 
 
 def actor_name(user: User | None, fallback: str = "system") -> str:

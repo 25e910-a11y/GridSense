@@ -15,7 +15,7 @@ class Thresholds:
     overvoltage_ratio: float = 1.10
     voltage_absent_max: float = 15.0
     overcurrent_amps: float | None = None
-    high_temperature_c: float | None = None
+    high_temperature_c: float | None = 65.0
     imbalance_percent: float = 10.0
     sudden_voltage_delta: float | None = None
     sudden_current_delta: float | None = None

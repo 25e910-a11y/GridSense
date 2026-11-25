@@ -57,7 +57,9 @@ The column list below describes the current conceptual schema and recommended co
 - `firmware_version`: varchar(30), nullable.
 - `is_active`: boolean, not null, default true.
 - `last_seen_at`: timestamptz, nullable.
-- `ingest_key`: varchar(80), nullable in current model; **security-sensitive**. Prefer storing a strong hash or migrating to a separate credential record with rotation/revocation metadata. Never return it through APIs.
+- `ingest_key`: varchar(80), nullable; **security-sensitive**. Holds the SHA-256 hash of the device's own ingest key (set by `POST /devices/{id}/ingest-key`). The plain key is never stored. Never return it through APIs.
+- `alarm_limits`: JSON, nullable. Per-device overrides of the site alarm limits, keyed by `Thresholds` field name. Added in migration `c3d5e7f9a1b2`.
+- `alert_mode`: varchar(20), not null, default `alert`. `alert` or `log_only`. Added in migration `c3d5e7f9a1b2`.
 - Constraint: unique device ID; only active, provisioned devices can ingest.
 
 ### `telemetry`

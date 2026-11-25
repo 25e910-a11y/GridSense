@@ -30,6 +30,25 @@ export const MaintenanceBoard: FC<MaintenanceBoardProps> = ({
   );
   const [newNote, setNewNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  // The backend refuses to close an order until a fresh reading after the
+  // repair is back to normal (HTTP 409). Show its reason instead of failing silently.
+  const changeStatus = async (
+    workOrderId: number,
+    status: 'in_progress' | 'restored' | 'closed',
+    diagnosis?: string
+  ) => {
+    setStatusError(null);
+    try {
+      await onUpdateStatus(workOrderId, status, diagnosis);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+      setStatusError(
+        axiosErr.response?.data?.detail ?? 'Could not update the work order. Check the connection and try again.'
+      );
+    }
+  };
 
   const selectedOrder = workOrders.find((o) => o.id === selectedOrderId) || workOrders[0];
 
@@ -93,7 +112,7 @@ export const MaintenanceBoard: FC<MaintenanceBoardProps> = ({
               return (
                 <div
                   key={order.id}
-                  onClick={() => setSelectedOrderId(order.id)}
+                  onClick={() => { setSelectedOrderId(order.id); setStatusError(null); }}
                   style={{
                     padding: '0.85rem 1rem',
                     borderRadius: 'var(--radius-md)',
@@ -188,7 +207,7 @@ export const MaintenanceBoard: FC<MaintenanceBoardProps> = ({
                     type="button"
                     className="btn btn-primary"
                     style={{ fontSize: '0.75rem' }}
-                    onClick={() => onUpdateStatus(selectedOrder.id, 'in_progress')}
+                    onClick={() => changeStatus(selectedOrder.id, 'in_progress')}
                   >
                     <ArrowRight size={13} />
                     Begin Work
@@ -199,7 +218,7 @@ export const MaintenanceBoard: FC<MaintenanceBoardProps> = ({
                     type="button"
                     className="btn btn-success"
                     style={{ fontSize: '0.75rem' }}
-                    onClick={() => onUpdateStatus(selectedOrder.id, 'restored', 'Load balanced and restored to nominal operating parameters.')}
+                    onClick={() => changeStatus(selectedOrder.id, 'restored', 'Load balanced and restored to nominal operating parameters.')}
                   >
                     <CheckSquare size={13} />
                     Mark Restored
@@ -210,14 +229,23 @@ export const MaintenanceBoard: FC<MaintenanceBoardProps> = ({
                     type="button"
                     className="btn btn-secondary"
                     style={{ fontSize: '0.75rem', borderColor: '#10b981', color: '#34d399' }}
-                    onClick={() => onUpdateStatus(selectedOrder.id, 'closed', selectedOrder.diagnosis || 'Restored and verified.')}
+                    onClick={() => changeStatus(selectedOrder.id, 'closed', selectedOrder.diagnosis || 'Restored and verified.')}
                   >
                     <CheckCircle2 size={13} />
-                    Close Order &amp; Rectify
+                    Close After Normal Reading
                   </button>
                 )}
               </div>
             </div>
+
+            {statusError && (
+              <div
+                role="alert"
+                style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.35)', color: '#f59e0b', fontSize: '0.8rem' }}
+              >
+                {statusError}
+              </div>
+            )}
 
             {/* Diagnosis / Initial Findings */}
             {selectedOrder.diagnosis && (

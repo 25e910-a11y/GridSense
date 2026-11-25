@@ -17,6 +17,7 @@ from app.models.fault import Fault
 from app.models.user import User
 from app.models.work_order import WorkAttempt, WorkOrder
 from app.services.audit import write_audit
+from app.services.return_to_normal import check_back_to_normal
 
 router = APIRouter(
     prefix="/maintenance",
@@ -277,6 +278,18 @@ def update_work_order_status(
         )
 
     now = datetime.now(timezone.utc)
+
+    # Return-to-normal check: a work order only closes once the device has sent
+    # a fresh reading after the repair that no longer shows the fault.
+    normal_check = None
+    if target_status == "closed" and order.status != "closed" and order.fault is not None:
+        normal_check = check_back_to_normal(db, order.fault, since=order.restored_at)
+        if not normal_check.ok:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=normal_check.reason,
+            )
+
     order.status = target_status
 
     if payload.diagnosis is not None:
@@ -307,7 +320,14 @@ def update_work_order_status(
         action="update_work_order_status",
         entity_type="work_order",
         entity_id=order.id,
-        detail=f"Status set to {target_status}",
+        detail=(
+            f"Status set to {target_status}"
+            + (
+                f"; readings verified normal (telemetry #{normal_check.telemetry_id}, source {normal_check.source})"
+                if normal_check is not None
+                else ""
+            )
+        ),
     )
 
     db.commit()

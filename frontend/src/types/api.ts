@@ -56,6 +56,9 @@ export interface Device {
   firmware_version?: string | null;
   is_active: boolean;
   last_seen_at?: string | null;
+  alert_mode?: 'alert' | 'log_only';
+  alarm_limits?: Record<string, number>;
+  has_own_ingest_key?: boolean;
 }
 
 export interface College {

@@ -78,6 +78,13 @@ Request concept:
 
 Response concept: success, stored telemetry ID, device/phase, sample and receipt timestamps, findings, and number of created/deduplicated faults. Never return credentials.
 
+Authentication (implemented):
+- `X-Ingest-Key` header. Each device can have its own key, created with `POST /devices/{id}/ingest-key`. Once a device has its own key, only that key is accepted for it.
+- The shared `INGEST_API_KEY` from the environment is still accepted for devices that have no key of their own yet.
+- A logged-in user's bearer token is also accepted, so the dashboard simulator can send readings (they are stored with `source = SIMULATION`).
+
+Response also includes `alert_mode` (`alert` or `log_only`) for the device.
+
 Rules:
 - Authenticate the sending device independently from human users.
 - Validate phase, timestamp, finite values, enums and device status.
@@ -127,7 +134,10 @@ Confirm query parameters from the current router before relying on specific filt
 - `GET /devices/` — list permitted devices.
 - `GET /devices/{device_id}` — device detail.
 - `PUT /devices/{device_id}` — update allowed metadata; admin only.
-- Device credentials must be provisioned/rotated through a secure flow and never returned in list/detail responses.
+- `GET /devices/{device_id}/limits` — the device's alert mode, its own limit overrides, and the effective limits (site defaults plus overrides).
+- `PUT /devices/{device_id}/limits` — admin only. Body: `{"limits": {"high_temperature_c": 60}, "alert_mode": "log_only"}`. Limit names are the fields of `Thresholds` in `app/rules/thresholds.py`. A value of `null` removes that override. Values must be greater than zero. `alert_mode` is `alert` (faults plus notifications) or `log_only` (faults are logged, nobody is notified). Audited.
+- `POST /devices/{device_id}/ingest-key` — admin only. Creates or replaces the device's own ingest key and returns it once. Only a SHA-256 hash is stored. Calling it again revokes the old key. Audited, the key itself is never logged.
+- List and detail responses never include the key or its hash. They show `has_own_ingest_key` instead.
 
 ## 7. Faults and notifications
 
@@ -155,6 +165,7 @@ Confirm query parameters from the current router before relying on specific filt
 - `PUT /maintenance/work-orders/{work_order_id}/status` — change status through allowed transitions only.
 - Server must enforce role, assignment and state-transition rules; UI cannot be trusted to do so.
 - State model documented by current project: `assigned` → `in_progress` → `restored` → `closed`. Confirm whether direct transitions are allowed before implementation.
+- Return-to-normal check (implemented): moving a work order to `closed` returns `409` unless the device has sent a reading after the order was marked `restored`, on the fault's phase, that no longer shows the same fault and is not a sensor or communication error. Only then is the fault set to `rectified`. The audit entry records which reading was used and its source (`REAL` or `SIMULATION`).
 
 ## 9. Relays (disabled until approved)
 

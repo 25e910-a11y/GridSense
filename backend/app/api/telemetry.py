@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.security import (
+    DEVICE_KEY_PENDING,
     get_current_user,
     require_ingest,
     validate_device_access,
@@ -15,8 +16,12 @@ from app.models.floor import Floor
 from app.models.telemetry import Telemetry
 from app.models.user import User
 from app.rules.engine import PhaseSample, evaluate_telemetry
-from app.rules.thresholds import thresholds_from_settings
 from app.schemas.telemetry import TelemetryCreate
+from app.services.device_config import (
+    alerts_enabled,
+    ingest_key_matches,
+    thresholds_for_device,
+)
 from app.services.faults import record_findings
 
 router = APIRouter(
@@ -30,8 +35,22 @@ def create_telemetry(
     data: TelemetryCreate,
     db: Session = Depends(get_db),
     caller: str = Depends(require_ingest),
+    x_ingest_key: str | None = Header(default=None, alias="X-Ingest-Key"),
 ):
     device = db.get(Device, data.device_id)
+
+    # One key per device: a device that has its own key must use it.
+    if caller == DEVICE_KEY_PENDING:
+        if device is None or not ingest_key_matches(device, x_ingest_key):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid device ingestion key",
+            )
+    elif caller == "device" and device is not None and device.ingest_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid device ingestion key: this device has its own key",
+        )
 
     if device is None:
         raise HTTPException(
@@ -98,11 +117,16 @@ def create_telemetry(
 
     findings = evaluate_telemetry(
         sample=_to_sample(telemetry),
-        thresholds=thresholds_from_settings(settings),
+        thresholds=thresholds_for_device(settings, device),
         previous=_to_sample(previous) if previous is not None else None,
         other_phases=[_to_sample(row) for row in other_rows],
     )
-    created_faults = record_findings(db, data.device_id, findings)
+    created_faults = record_findings(
+        db,
+        data.device_id,
+        findings,
+        notify=alerts_enabled(device),
+    )
 
     db.commit()
     db.refresh(telemetry)
@@ -129,6 +153,7 @@ def create_telemetry(
             for finding in findings
         ],
         "faults_created": len(created_faults),
+        "alert_mode": device.alert_mode,
     }
 
 
