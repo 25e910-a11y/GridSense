@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+
+
 def test_work_order_workflow(
     client,
     admin_headers,
@@ -5,6 +8,7 @@ def test_work_order_workflow(
     technician_user,
     operator_headers,
     shift_incharge_headers,
+    ingest_headers,
 ):
     # 1. Setup a device (requires admin) and fault (requires technician/admin)
     dev_res = client.post(
@@ -94,7 +98,35 @@ def test_work_order_workflow(
     assert status_res.status_code == 200
     assert status_res.json()["status"] == "restored"
 
-    # 7. Close work order (Admin or Shift In-Charge permitted)
+    # 7a. Closing is refused until a fresh reading after the repair shows normal values
+    early_close = client.put(
+        f"/maintenance/work-orders/{wo_id}/status",
+        json={"status": "closed", "actor": "Supervisor Dave"},
+        headers=admin_headers,
+    )
+    assert early_close.status_code == 409
+    assert "No new reading" in early_close.json()["detail"]
+
+    # 7b. Device sends a normal reading on the repaired phase
+    reading = client.post(
+        "/telemetry/",
+        json={
+            "device_id": device_id,
+            "phase": "Y",
+            "voltage": 231.0,
+            "current": 12.0,
+            "power": 2700.0,
+            "energy": 10.0,
+            "power_factor": 0.97,
+            "frequency": 50.0,
+            "temperature": 34.0,
+            "sampled_at": datetime.now(timezone.utc).isoformat(),
+        },
+        headers=ingest_headers,
+    )
+    assert reading.status_code == 200
+
+    # 7c. Close work order (Admin or Shift In-Charge permitted)
     close_res = client.put(
         f"/maintenance/work-orders/{wo_id}/status",
         json={"status": "closed", "actor": "Supervisor Dave"},

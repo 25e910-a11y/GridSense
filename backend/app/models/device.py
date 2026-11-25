@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
@@ -54,9 +54,27 @@ class Device(Base):
         nullable=True,
     )
 
+    # SHA-256 hash of this device's own ingest key. The plain key is shown
+    # once when it is generated and is never stored or returned again.
     ingest_key: Mapped[str | None] = mapped_column(
         String(80),
         nullable=True,
+    )
+
+    # Per-device overrides of the site alarm limits, keyed by Thresholds
+    # field name (for example {"high_temperature_c": 60}). Empty = site defaults.
+    alarm_limits: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    # "alert": findings raise faults and notifications.
+    # "log_only": findings are logged as faults but nobody is notified.
+    alert_mode: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="alert",
+        server_default="alert",
     )
 
     floor = relationship(

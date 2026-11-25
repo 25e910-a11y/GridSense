@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     OVERVOLTAGE_RATIO: float = 1.10
     VOLTAGE_ABSENT_MAX: float = 15.0
     OVERCURRENT_AMPS: float | None = None
-    HIGH_TEMPERATURE_C: float | None = None
+    HIGH_TEMPERATURE_C: float | None = 65.0  # enclosure warning, adjustable
     IMBALANCE_PERCENT: float = 10.0
     SUDDEN_VOLTAGE_DELTA: float | None = None
     SUDDEN_CURRENT_DELTA: float | None = None

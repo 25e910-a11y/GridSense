@@ -282,12 +282,14 @@ def _electrical_findings(
                 fault_type="HIGH_TEMPERATURE",
                 category=CATEGORY_ELECTRICAL,
                 severity="warning",
-                phase=sample.phase,
+                # One DS18B20 per enclosure, so this is a node-level warning,
+                # not a per-phase one. phase=None keeps it to a single event.
+                phase=None,
                 measured_value=sample.temperature,
                 expected_value=thresholds.high_temperature_c,
                 unit="°C",
                 description=(
-                    f"Temperature {sample.temperature} °C is at or above the configured "
+                    f"Enclosure temperature {sample.temperature} °C is at or above the configured "
                     f"monitoring limit {thresholds.high_temperature_c} °C."
                 ),
             )
@@ -447,7 +449,8 @@ def _imbalance_findings(
         return []
 
     max_deviation = max(abs(value - average) / average * 100 for value in values)
-    if max_deviation < thresholds.imbalance_percent:
+    # Spec: alarm only when imbalance is strictly above the band (>10% by default).
+    if max_deviation <= thresholds.imbalance_percent:
         return []
 
     return [

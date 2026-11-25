@@ -64,7 +64,7 @@ UNDERVOLTAGE_RATIO=0.85
 OVERVOLTAGE_RATIO=1.10
 VOLTAGE_ABSENT_MAX=15.0
 OVERCURRENT_AMPS=32.0
-HIGH_TEMPERATURE_C=60.0
+HIGH_TEMPERATURE_C=65.0
 IMBALANCE_PERCENT=10.0
 ```
 
@@ -78,8 +78,8 @@ To initialize or upgrade the database schema (PostgreSQL or SQLite), always use 
 cd backend
 .\.venv\Scripts\alembic upgrade head
 ```
-- **New installation:** Executes revisions `53f1a59aca1d -> 4a921bc8c9a8 -> 7b831cd9e102`, creating all 12 tables, foreign keys, and indexes in topological order.
-- **Existing database:** Idempotent migration logic inspects existing tables, columns, constraints, and indexes. It automatically adds any missing schema elements, preserves existing row data, and updates `alembic_version` to `head` (`7b831cd9e102`).
+- **New installation:** Executes revisions `53f1a59aca1d -> 4a921bc8c9a8 -> 7b831cd9e102 -> c3d5e7f9a1b2`, creating all 12 tables, foreign keys, and indexes in topological order.
+- **Existing database:** Idempotent migration logic inspects existing tables, columns, constraints, and indexes. It automatically adds any missing schema elements, preserves existing row data, and updates `alembic_version` to `head` (`c3d5e7f9a1b2`).
 - **Note on `alembic stamp head`:** Do **not** run `alembic stamp head` as a shortcut on existing databases. Stamping only records the revision hash in `alembic_version` without executing DDL, which leaves missing tables or columns unapplied. Stamping is only appropriate if the full schema was just created in its entirety via `Base.metadata.create_all()` in the current revision.
 
 ### Step 3.2: Seed Database with Realistic Telemetry & Hierarchy
@@ -158,6 +158,6 @@ $env:ADMIN_USERNAME="sysadmin"; $env:ADMIN_PASSWORD="testadminpassword123"; .\.v
 | `.\.venv\Scripts\pytest -v` | Windows 11 PowerShell | **TESTED: PASSED** | 44/44 tests pass in 8.69s |
 | `cmd /c npm run build` | Windows 11 CMD | **TESTED: PASSED** | `tsc -b && vite build` built in 876ms |
 | `python database/seed.py` | Python 3.13 | **TESTED: PASSED** | Database created and populated |
-| `alembic upgrade head` | Clean & Existing databases | **TESTED: PASSED** | Migrations `53f1a59aca1d -> 4a921bc8c9a8 -> 7b831cd9e102` successfully create/verify all 12 tables and reach head. |
+| `alembic upgrade head` | Clean & Existing databases | **TESTED: PASSED** | Migrations `53f1a59aca1d -> 4a921bc8c9a8 -> 7b831cd9e102 -> c3d5e7f9a1b2` successfully create/verify all 12 tables and reach head. |
 | Live ESP32 Wi-Fi Ingestion | Hardware Testbench | **UNTESTED** | Microcontroller firmware in `firmware/` not yet written |
 | Live 40 A Relay Switching | Physical Hardware | **UNTESTED** | Restricted pending electrical safety review |
