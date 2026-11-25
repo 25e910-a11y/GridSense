@@ -12,6 +12,10 @@ SENSOR_QUALITY_TOKENS = {
     "sensor_error",
     "timeout",
     "offline",
+    # Values sent by the node firmware and the built-in simulator
+    "corrupt",
+    "crc_error",
+    "sensor_comm_timeout",
 }
 
 USABLE_QUALITY_TOKENS = {
