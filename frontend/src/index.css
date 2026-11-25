@@ -948,3 +948,22 @@ code, .mono-val {
   }
 }
 
+
+/* Laptop widths (about 1280 to 1600 px): with every tab visible for an admin the
+   header was wider than the screen and the last tabs were cut off. Let it wrap. */
+.header {
+  flex-wrap: wrap;
+}
+
+.header-center {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.nav-tabs {
+  flex-wrap: wrap;
+}
+
+.nav-tab-btn {
+  white-space: nowrap;
+}

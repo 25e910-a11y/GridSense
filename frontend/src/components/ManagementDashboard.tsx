@@ -156,7 +156,7 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({ campusHierar
             <Zap size={18} style={{ color: '#38bdf8' }} />
           </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff', fontFamily: 'var(--font-mono)' }}>
-            {summary ? summary.total_active_power_kw.toFixed(2) : '--'}
+            {summary ? (summary.total_active_power_watts / 1000).toFixed(2) : '--'}
             <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginLeft: 4 }}>kW</span>
           </div>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 4, display: 'block' }}>
@@ -325,7 +325,7 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({ campusHierar
       >
         <Clock size={18} style={{ color: '#38bdf8', flexShrink: 0 }} />
         <span>
-          Management Telemetry is calculated in real time across authorized monitoring points using calibrated PZEM-004T V4 energy transducers. Physical relay actuation and engineering thresholds are restricted to certified operations personnel.
+          Figures are worked out from the latest reading of each PZEM-004T V4 at the monitoring points you can see. The modules have not yet been checked against a reference meter. Relay commands are recorded only and are not wired to any SSR.
         </span>
       </div>
     </div>

@@ -46,15 +46,33 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
   const py = phases?.Y;
   const pb = phases?.B;
 
-  // Aggregate computations
-  const totalPowerKW = (((pr?.power || 0) + (py?.power || 0) + (pb?.power || 0)) / 1000).toFixed(2);
-  const avgVoltage = (((pr?.voltage || 0) + (py?.voltage || 0) + (pb?.voltage || 0)) / 3).toFixed(1);
-  const totalCurrent = ((pr?.current || 0) + (py?.current || 0) + (pb?.current || 0)).toFixed(2);
-  const maxTemp = Math.max(pr?.temperature || 0, py?.temperature || 0, pb?.temperature || 0).toFixed(1);
+  // A reading is usable only when its data_quality is one the backend rule engine
+  // accepts (backend/app/rules/engine.py USABLE_QUALITY_TOKENS). Anything else is a
+  // sensor or communication error, so its numbers are left out instead of being
+  // shown as 0 V (which would look like a lost phase).
+  const USABLE_QUALITY = ['good', 'ok', 'valid', 'estimated'];
+  const isUsable = (p?: PhaseTelemetry): p is PhaseTelemetry =>
+    Boolean(p) && (p?.data_quality == null || USABLE_QUALITY.includes(p.data_quality.trim().toLowerCase()));
+  const usable = [pr, py, pb].filter(isUsable);
+  const sumOf = (values: (number | null | undefined)[]) =>
+    values.reduce<number>((total, v) => total + (typeof v === 'number' ? v : 0), 0);
 
-  // 3-Phase imbalance calculation
-  const currents = [pr?.current || 0, py?.current || 0, pb?.current || 0].filter(c => c > 0);
-  let currentImbalancePct = '0.0';
+  // Aggregate computations (usable phases only)
+  const totalPowerKW = usable.length ? (sumOf(usable.map((p) => p.power)) / 1000).toFixed(2) : '--';
+  const usableVoltages = usable.map((p) => p.voltage).filter((v): v is number => typeof v === 'number');
+  const avgVoltage = usableVoltages.length
+    ? (sumOf(usableVoltages) / usableVoltages.length).toFixed(1)
+    : '--';
+  const totalCurrent = usable.length ? sumOf(usable.map((p) => p.current)).toFixed(2) : '--';
+  // One DS18B20 per enclosure; its value rides along with every phase reading.
+  const temps = [pr, py, pb]
+    .map((p) => p?.temperature)
+    .filter((t): t is number => typeof t === 'number');
+  const maxTemp = temps.length ? Math.max(...temps).toFixed(1) : '--';
+
+  // 3-phase imbalance needs all three phases usable
+  const currents = usable.length === 3 ? usable.map((p) => p.current || 0).filter((c) => c > 0) : [];
+  let currentImbalancePct = '--';
   if (currents.length === 3) {
     const meanI = currents.reduce((a, b) => a + b, 0) / 3;
     if (meanI > 0) {
@@ -63,8 +81,8 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
     }
   }
 
-  const voltages = [pr?.voltage || 0, py?.voltage || 0, pb?.voltage || 0].filter(v => v > 0);
-  let voltageImbalancePct = '0.0';
+  const voltages = usable.length === 3 ? usable.map((p) => p.voltage || 0).filter((v) => v > 0) : [];
+  let voltageImbalancePct = '--';
   if (voltages.length === 3) {
     const meanV = voltages.reduce((a, b) => a + b, 0) / 3;
     if (meanV > 0) {
@@ -74,11 +92,12 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
   }
 
   const renderPhaseCard = (phaseKey: 'R' | 'Y' | 'B', pData?: PhaseTelemetry, colorClass: string = 'phase-r') => {
-    const isOffline = !pData || pData.voltage === 0;
-    const isQualityDegraded = Boolean(
-      pData?.data_quality &&
-      ['STALE', 'BAD', 'SUSPECT', 'DEGRADED', 'ERROR'].includes(pData.data_quality.toUpperCase())
-    );
+    const isSensorError = Boolean(pData) && !isUsable(pData);
+    const isNoVoltage = isUsable(pData) && typeof pData.voltage === 'number' && pData.voltage <= 15;
+    const isOffline = !pData || isNoVoltage;
+    const isQualityDegraded = isSensorError;
+    // Numbers from a sensor error are not real readings, so show "--".
+    const shown = isSensorError ? undefined : pData;
 
     return (
       <div className={`phase-card ${colorClass}`}>
@@ -138,7 +157,7 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
                 fontFamily: 'var(--font-mono)',
               }}
             >
-              {isOffline ? 'OFFLINE' : pData?.data_quality || 'GOOD'}
+              {!pData ? 'NO DATA' : isSensorError ? 'SENSOR ERROR' : isNoVoltage ? 'NO VOLTAGE' : 'GOOD'}
             </span>
           </div>
         </div>
@@ -151,7 +170,7 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
               RMS Voltage
             </span>
             <div className="metric-value-row">
-              <span className="metric-value">{pData?.voltage?.toFixed(1) ?? '--'}</span>
+              <span className="metric-value">{shown?.voltage?.toFixed(1) ?? '--'}</span>
               <span className="metric-unit">V</span>
             </div>
           </div>
@@ -163,7 +182,7 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
               Current
             </span>
             <div className="metric-value-row">
-              <span className="metric-value">{pData?.current?.toFixed(2) ?? '--'}</span>
+              <span className="metric-value">{shown?.current?.toFixed(2) ?? '--'}</span>
               <span className="metric-unit">A</span>
             </div>
           </div>
@@ -175,7 +194,7 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
               Active Power
             </span>
             <div className="metric-value-row">
-              <span className="metric-value">{pData?.power?.toFixed(1) ?? '--'}</span>
+              <span className="metric-value">{shown?.power?.toFixed(1) ?? '--'}</span>
               <span className="metric-unit">W</span>
             </div>
           </div>
@@ -187,7 +206,7 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
               Cumulative Energy
             </span>
             <div className="metric-value-row">
-              <span className="metric-value">{pData?.energy?.toFixed(2) ?? '--'}</span>
+              <span className="metric-value">{shown?.energy?.toFixed(2) ?? '--'}</span>
               <span className="metric-unit">kWh</span>
             </div>
           </div>
@@ -196,7 +215,7 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
           <div className="metric-item">
             <span className="metric-label">Power Factor (cos φ)</span>
             <div className="metric-value-row">
-              <span className="metric-value">{pData?.power_factor?.toFixed(2) ?? '--'}</span>
+              <span className="metric-value">{shown?.power_factor?.toFixed(2) ?? '--'}</span>
               <span className="metric-unit">PF</span>
             </div>
           </div>
@@ -205,7 +224,7 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
           <div className="metric-item">
             <span className="metric-label">Frequency</span>
             <div className="metric-value-row">
-              <span className="metric-value">{pData?.frequency?.toFixed(2) ?? '--'}</span>
+              <span className="metric-value">{shown?.frequency?.toFixed(2) ?? '--'}</span>
               <span className="metric-unit">Hz</span>
             </div>
           </div>
@@ -225,7 +244,7 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <Thermometer size={13} style={{ color: '#f97316' }} />
-            Sensor Temp: <strong style={{ color: '#fff' }}>{pData?.temperature?.toFixed(1) ?? '--'}°C</strong>
+            Enclosure Temp: <strong style={{ color: '#fff' }}>{pData?.temperature?.toFixed(1) ?? '--'}°C</strong>
           </span>
           <span className="mono-val" style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
             {pData?.sampled_at ? new Date(pData.sampled_at).toLocaleTimeString() : 'N/A'}
@@ -323,7 +342,7 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
             <Gauge size={24} />
           </div>
           <div className="summary-details">
-            <span className="summary-label">Mean 3-Phase Voltage</span>
+            <span className="summary-label">Mean Phase Voltage</span>
             <span className="summary-val">{avgVoltage} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>V</span></span>
           </div>
         </div>
@@ -343,7 +362,7 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
             <Thermometer size={24} />
           </div>
           <div className="summary-details">
-            <span className="summary-label">Max Line Temperature</span>
+            <span className="summary-label">Enclosure Temperature</span>
             <span className="summary-val">{maxTemp} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>°C</span></span>
           </div>
         </div>
@@ -375,7 +394,7 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
               <Layers size={15} style={{ color: '#06b6d4' }} />
               3-Phase Current Imbalance
             </span>
-            <strong style={{ color: +currentImbalancePct > 10 ? '#ef4444' : '#10b981', fontFamily: 'var(--font-mono)' }}>
+            <strong style={{ color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>
               {currentImbalancePct}%
             </strong>
           </div>
@@ -383,14 +402,14 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
             <div
               style={{
                 height: '100%',
-                width: `${Math.min(+currentImbalancePct * 5, 100)}%`,
-                background: +currentImbalancePct > 10 ? '#ef4444' : '#06b6d4',
+                width: `${Math.min((+currentImbalancePct || 0) * 5, 100)}%`,
+                background: '#06b6d4',
                 transition: 'width 0.4s ease',
               }}
             ></div>
           </div>
           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-            Threshold limit: &lt; 10% deviation from 3-phase mean
+            For reference only. No alarm is set on current imbalance.
           </span>
         </div>
 
@@ -399,9 +418,9 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
             <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Zap size={15} style={{ color: '#3b82f6' }} />
-              Voltage Deviation / Symmetry
+              3-Phase Voltage Imbalance
             </span>
-            <strong style={{ color: +voltageImbalancePct > 3 ? '#fbbf24' : '#10b981', fontFamily: 'var(--font-mono)' }}>
+            <strong style={{ color: +voltageImbalancePct > 10 ? '#ef4444' : '#10b981', fontFamily: 'var(--font-mono)' }}>
               {voltageImbalancePct}%
             </strong>
           </div>
@@ -409,14 +428,14 @@ export const LiveMetrics: FC<LiveMetricsProps> = ({ data, isLiveBackend = true }
             <div
               style={{
                 height: '100%',
-                width: `${Math.min(+voltageImbalancePct * 20, 100)}%`,
-                background: +voltageImbalancePct > 3 ? '#fbbf24' : '#3b82f6',
+                width: `${Math.min((+voltageImbalancePct || 0) * 5, 100)}%`,
+                background: +voltageImbalancePct > 10 ? '#ef4444' : '#3b82f6',
                 transition: 'width 0.4s ease',
               }}
             ></div>
           </div>
           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-            Permissible grid tolerance: &lt; 3% deviation
+            Alarm above 10% from the 3-phase mean (default limit).
           </span>
         </div>
 

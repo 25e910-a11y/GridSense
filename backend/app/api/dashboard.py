@@ -18,6 +18,7 @@ from app.models.fault import Fault
 from app.models.floor import Floor
 from app.models.telemetry import Telemetry
 from app.models.user import User
+from app.models.work_order import WorkOrder
 
 router = APIRouter(
     prefix="/dashboard",
@@ -157,8 +158,17 @@ def get_management_summary(
             )
             if latest:
                 total_active_power += (latest.power or 0.0)
-                if latest.energy and latest.energy > total_energy_kwh:
-                    total_energy_kwh = max(total_energy_kwh, latest.energy)
+                # Each PZEM keeps its own energy counter, so the total is the sum of all phases.
+                total_energy_kwh += (latest.energy or 0.0)
+
+    open_work_orders = 0
+    if device_ids:
+        open_work_orders = (
+            db.query(WorkOrder)
+            .join(Fault, WorkOrder.fault_id == Fault.id)
+            .filter(Fault.device_id.in_(device_ids), WorkOrder.status != "closed")
+            .count()
+        )
 
     return {
         "timestamp": now_utc,
@@ -171,6 +181,7 @@ def get_management_summary(
         "open_faults_count": len(all_open_faults),
         "critical_faults_count": critical_faults,
         "warning_faults_count": warning_faults,
+        "open_work_orders_count": open_work_orders,
         "total_active_power_watts": round(total_active_power, 2),
         "total_energy_kwh": round(total_energy_kwh, 2),
     }
